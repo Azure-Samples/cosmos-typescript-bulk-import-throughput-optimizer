@@ -1,0 +1,23 @@
+{
+  "name": "cosmos-typescript-bulk-import-throughput-optimizer",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ville Rantala",
+  "license": "MIT",
+  "dependencies": {
+    "@azure/cosmos": "^3.6.3",
+    "async": "^3.2.0",
+    "faker": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/async": "^3.2.1",
+    "@types/faker": "^4.1.11",
+    "@types/node": "^13.13.5",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.8.3"
+  }
+}
