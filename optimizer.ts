@@ -2,14 +2,14 @@ import { CosmosClient, Container, Database } from "@azure/cosmos";
 import *  as async from "async";
 import *  as faker from "faker";
 
-class Optimizer {
+export class Optimizer {
     private EndpointUrl: string = process.env.ENDPOINT_URL;
     private AuthorizationKey: string = process.env.AUTHORIZATION_KEY;
     private DatabaseName: string = "bulk-tutorial";
     private ContainerName: string  = "items";
     private ItemsToInsert: number = 3000;
-    private Concurrency: number = 100;
-    private Throughput: number = 5000;
+    private Concurrency: number = 10;
+    private Throughput: number = 400;
 
     private client: CosmosClient;
     private database: Database;
@@ -84,6 +84,3 @@ class Optimizer {
         });
     }
 }
-
-let optimizer = new Optimizer();
-optimizer.runAll();

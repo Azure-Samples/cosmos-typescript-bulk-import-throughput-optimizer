@@ -2,7 +2,7 @@
   "name": "cosmos-typescript-bulk-import-throughput-optimizer",
   "version": "0.0.1",
   "description": "",
-  "main": "dist/index.js",
+  "main": "dist/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
