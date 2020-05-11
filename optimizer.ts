@@ -15,8 +15,8 @@ export class Optimizer {
     private database: Database;
     private container: Container;
 
-    public constructor() {
-        this.client = new CosmosClient({
+    public constructor(client?: any) {
+        this.client = client || new CosmosClient({
             endpoint: this.EndpointUrl,
             key: this.AuthorizationKey
         });
@@ -79,8 +79,7 @@ export class Optimizer {
     public async runAll() {
         await this.createDatabase();
         await this.createContainer();
-        this.createItems().then(async () => {
-            await this.deleteContainer();
-        });
+        await this.createItems();
+        await this.deleteContainer();
     }
 }
