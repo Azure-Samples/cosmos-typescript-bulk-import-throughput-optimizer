@@ -50,7 +50,8 @@ describe('Optimizer tests', () => {
         let containerCreateSpy = sinon.spy(mockClient.database.containers, 'createIfNotExists');
         let itemCreateSpy = sinon.spy(mockClient.container.items, 'create');
         let containerDeleteSpy = sinon.spy(mockClient.container, 'delete');
-        const optimizer = new Optimizer(mockClient);
+        const optimizer = new Optimizer();
+        await optimizer.initialize(mockClient);
         await optimizer.runAll();
         databaseCreateSpy.should.have.been.calledBefore(containerCreateSpy);
         containerCreateSpy.should.have.been.calledBefore(itemCreateSpy);

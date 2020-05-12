@@ -1,4 +1,6 @@
 import { Optimizer } from './optimizer';
 
 let optimizer = new Optimizer();
-optimizer.runAll();
+optimizer.initialize().then(() => {
+    optimizer.runAll();
+});
