@@ -10,7 +10,9 @@
   "author": "Ville Rantala",
   "license": "MIT",
   "dependencies": {
+    "@azure/core-http": "^1.1.2",
     "@azure/cosmos": "^3.6.3",
+    "@azure/identity": "^1.1.0-preview.3",
     "async": "^3.2.0",
     "faker": "^4.1.0"
   },
