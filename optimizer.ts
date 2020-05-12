@@ -64,6 +64,7 @@ export class Optimizer {
         return new Promise((resolve, reject) => {
             let startTime = Date.now();
             let createList = [];
+            let failedItems = 0;
             for (let i = 0; i < this.itemsToInsert; i++) {
                 const uuid = faker.random.uuid();
                 const username = faker.internet.userName();
@@ -71,12 +72,17 @@ export class Optimizer {
                     if (i % 1000 === 0 && i > 0) {
                         console.log("Creating item number " + i);
                     }
-                    await this.container.items.create({
-                        id: uuid,
-                        username: username,
-                        pk: uuid
-                    });
-                    callback();
+                    try {
+                        await this.container.items.create({
+                            id: uuid,
+                            username: username,
+                            pk: uuid
+                        });
+                    } catch (error) {
+                        failedItems += 1;
+                    } finally {
+                        callback();
+                    }
                 });
             }
             async.parallelLimit(createList, this.concurrency, (error, results) => {
@@ -88,6 +94,7 @@ export class Optimizer {
                 let durationInSeconds = (endTime - startTime) / 1000;
                 console.log("Creating " + this.itemsToInsert + " items took " + durationInSeconds + " seconds");
                 console.log("Average throughput " + this.itemsToInsert / durationInSeconds + " per second");
+                console.log("Failed to create " + failedItems + " items");
                 resolve(results);
             });
         });
