@@ -1,4 +1,4 @@
-import { CosmosClient, Container, Database, IndexingMode } from "@azure/cosmos";
+import { CosmosClient, Container, Database, IndexingMode, PartitionKind } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { ServiceClient, bearerTokenAuthenticationPolicy } from "@azure/core-http";
 import *  as async from "async";
@@ -43,14 +43,15 @@ export class Optimizer {
 
         this.client = new CosmosClient({
             endpoint: this.endpointUrl,
-            key: this.authorizationKey
+            auth: {
+                masterKey: this.authorizationKey
+            }
         });
     }
 
     public async createDatabase() {
         this.database = (await this.client.databases.createIfNotExists({
-            id: this.databaseName,
-            throughput: this.throughput
+            id: this.databaseName
         })).database;
     }
 
@@ -58,7 +59,8 @@ export class Optimizer {
         this.container = (await this.database.containers.createIfNotExists({
             id: this.containerName,
             partitionKey: {
-                paths: ["/pk"]
+                paths: ["/pk"],
+                kind: PartitionKind.Hash
             },
             indexingPolicy: {
                 indexingMode: IndexingMode.consistent,

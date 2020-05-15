@@ -5,7 +5,7 @@ Chai.should();
 const expect = Chai.expect;
 import * as sinon from 'sinon';
 import * as sinonChai from 'sinon-chai';
-Chai.use(sinonChai);
+//Chai.use(sinonChai);
 
 class MockClient {
     public container: any = {
