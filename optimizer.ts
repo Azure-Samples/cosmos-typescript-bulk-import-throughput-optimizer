@@ -2,6 +2,7 @@ import { CosmosClient, Container, Database, IndexingMode } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { ServiceClient, bearerTokenAuthenticationPolicy } from "@azure/core-http";
 import *  as async from "async";
+import * as retry from 'async-retry';
 import *  as faker from "faker";
 
 export class Optimizer {
@@ -71,43 +72,41 @@ export class Optimizer {
     }
 
     public async createItems() {
-        return new Promise((resolve, reject) => {
-            let startTime = Date.now();
-            let createList = [];
-            let failedItems = 0;
-            for (let i = 0; i < this.itemsToInsert; i++) {
-                const uuid = faker.random.uuid();
-                const username = faker.internet.userName();
-                createList.push(async (callback: () => void) => {
-                    if (i % 1000 === 0 && i > 0) {
-                        console.log("Creating item number " + i);
-                    }
-                    try {
-                        await this.container.items.create({
-                            id: uuid,
-                            username: username,
-                            pk: uuid
-                        });
-                    } catch (error) {
-                        failedItems += 1;
-                    } finally {
-                        callback();
-                    }
-                });
-            }
-            async.parallelLimit(createList, this.concurrency, (error, results) => {
-                if (error) {
-                    reject(error);
-                    return;
-                }
-                let endTime = Date.now()
-                let durationInSeconds = (endTime - startTime) / 1000;
-                console.log("Creating " + this.itemsToInsert + " items took " + durationInSeconds + " seconds");
-                console.log("Average throughput " + this.itemsToInsert / durationInSeconds + " per second");
-                console.log("Failed to create " + failedItems + " items");
-                resolve(results);
+        let startTime = Date.now();
+        let createList = [];
+        let retriedItems = 0;
+        for (let i = 0; i < this.itemsToInsert; i++) {
+            const uuid = faker.random.uuid();
+            const username = faker.internet.userName();
+            createList.push({
+                id: uuid,
+                username: username,
+                pk: uuid
             });
+        }
+        await async.eachOfLimit(createList, this.concurrency, async (item, index: number, callback) => {
+            if (index % 1000 === 0 && index > 0) {
+                console.log("Creating item number " + index);
+            }
+            await retry(async bail => {
+                try {
+                    await this.container.items.create(item);
+                } catch (error) {
+                    // If the error is not about throttling, abort the retry
+                    if (error.code !== 429) {
+                        bail(error);
+                    } else {
+                        retriedItems += 1;
+                    }
+                }
+            });
+            callback();
         });
+        let endTime = Date.now()
+        let durationInSeconds = (endTime - startTime) / 1000;
+        console.log("Creating " + this.itemsToInsert + " items took " + durationInSeconds + " seconds");
+        console.log("Average throughput " + this.itemsToInsert / durationInSeconds + " per second");
+        console.log("Retried creation of " + retriedItems + " items");
     }
 
     public async deleteDatabase() {
