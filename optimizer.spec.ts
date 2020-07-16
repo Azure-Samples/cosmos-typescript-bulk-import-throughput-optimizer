@@ -26,6 +26,9 @@ class MockClient {
                     container: this.container
                 });
             }
+        },
+        delete: () => {
+            return Promise.resolve()
         }
     }
 
@@ -50,11 +53,13 @@ describe('Optimizer tests', () => {
         let containerCreateSpy = sinon.spy(mockClient.database.containers, 'createIfNotExists');
         let itemCreateSpy = sinon.spy(mockClient.container.items, 'create');
         let containerDeleteSpy = sinon.spy(mockClient.container, 'delete');
+        let databaseDeleteSpy = sinon.spy(mockClient.database, 'delete');
         const optimizer = new Optimizer();
         await optimizer.initialize(mockClient);
         await optimizer.runAll();
         databaseCreateSpy.should.have.been.calledBefore(containerCreateSpy);
         containerCreateSpy.should.have.been.calledBefore(itemCreateSpy);
         itemCreateSpy.should.have.been.calledBefore(containerDeleteSpy);
+        containerDeleteSpy.should.have.been.calledBefore(databaseDeleteSpy);
     });
 });
