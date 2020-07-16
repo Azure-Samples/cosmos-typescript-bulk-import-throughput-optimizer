@@ -75,19 +75,21 @@ export class Optimizer {
             let startTime = Date.now();
             let createList = [];
             let failedItems = 0;
+            let consumedRequestUnits = 0;
             for (let i = 0; i < this.itemsToInsert; i++) {
                 const uuid = faker.random.uuid();
                 const username = faker.internet.userName();
                 createList.push(async (callback: () => void) => {
                     if (i % 1000 === 0 && i > 0) {
-                        console.log("Creating item number " + i);
+                        console.log(`Creating item number ${i}`);
                     }
                     try {
-                        await this.container.items.create({
+                        let result = await this.container.items.create({
                             id: uuid,
                             username: username,
                             pk: uuid
                         });
+                        consumedRequestUnits += result.requestCharge;
                     } catch (error) {
                         failedItems += 1;
                     } finally {
@@ -102,9 +104,10 @@ export class Optimizer {
                 }
                 let endTime = Date.now()
                 let durationInSeconds = (endTime - startTime) / 1000;
-                console.log("Creating " + this.itemsToInsert + " items took " + durationInSeconds + " seconds");
-                console.log("Average throughput " + this.itemsToInsert / durationInSeconds + " per second");
-                console.log("Failed to create " + failedItems + " items");
+                console.log(`Creating ${this.itemsToInsert} items took ${durationInSeconds} seconds`);
+                console.log(`Average throughput ${this.itemsToInsert / durationInSeconds} per second`);
+                console.log(`Failed to create ${failedItems} items`);
+                console.log(`Consumed Request Units ${consumedRequestUnits}`);
                 resolve(results);
             });
         });
@@ -123,5 +126,12 @@ export class Optimizer {
         await this.createContainer();
         await this.createItems();
         await this.deleteContainer();
+        await this.deleteDatabase();
+    }
+
+    public async runCreates() {
+        await this.createDatabase();
+        await this.createContainer();
+        await this.createItems();
     }
 }
