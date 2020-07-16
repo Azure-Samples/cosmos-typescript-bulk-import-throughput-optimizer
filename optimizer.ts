@@ -1,8 +1,13 @@
 import { CosmosClient, Container, Database, IndexingMode } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { ServiceClient, bearerTokenAuthenticationPolicy } from "@azure/core-http";
-import *  as async from "async";
 import *  as faker from "faker";
+
+import { ImportMethod, PartitionKeyValue } from './bulk-importer';
+import { BulkImporterParallel } from './bulk-importer-parallel';
+import { BulkImporterStoredProcedure } from './bulk-importer-stored-procedure';
+
+const FRACTION_DIGITS = 2;
 
 export class Optimizer {
     private endpointUrl: string = process.env.ENDPOINT_URL;
@@ -10,17 +15,20 @@ export class Optimizer {
     private subscriptionId: string = process.env.SUBSCRIPTION_ID;
     private resourceGroupName: string = process.env.RESOURCE_GROUP_NAME;
     private accountName: string = process.env.ACCOUNT_NAME;
-    private databaseName: string = "bulk-tutorial";
-    private containerName: string  = "items";
-    private itemsToInsert: number = 3000;
-    private concurrency: number = 10;
-    private throughput: number = 400;
+    private databaseName: string = process.env.DATABASE_NAME || 'bulk-tutorial';
+    private containerName: string  = process.env.CONTAINER_NAME || 'items';
+    private itemsToInsert: number = parseInt(process.env.ITEMS_TO_INSERT) || 1000;
+    private throughput: number = parseInt(process.env.THROUGHPUT) || 400;
 
     private client: CosmosClient;
     private database: Database;
     private container: Container;
 
-    public async initialize(client?: any) {
+    private testData: Array<any>;
+
+    public async initialize(client?: CosmosClient): Promise<void> {
+        this.createTestData();
+
         if (client) {
             this.client = client;
             return;
@@ -43,18 +51,27 @@ export class Optimizer {
 
         this.client = new CosmosClient({
             endpoint: this.endpointUrl,
-            key: this.authorizationKey
+            key: this.authorizationKey,
+            connectionPolicy: {
+                // Use a retry policy that retries long enough in case lots of
+                // data is tried to be imported to a low throughput container.
+                retryOptions: {
+                    maxRetryAttemptCount: 120,
+                    maxWaitTimeInSeconds: 600,
+                    fixedRetryIntervalInMilliseconds: 0
+                }
+            }
         });
     }
 
-    public async createDatabase() {
+    public async createDatabase(): Promise<void> {
         this.database = (await this.client.databases.createIfNotExists({
             id: this.databaseName,
             throughput: this.throughput
         })).database;
     }
 
-    public async createContainer() {
+    public async createContainer(): Promise<void> {
         this.container = (await this.database.containers.createIfNotExists({
             id: this.containerName,
             partitionKey: {
@@ -70,68 +87,82 @@ export class Optimizer {
         })).container;
     }
 
-    public async createItems() {
-        return new Promise((resolve, reject) => {
-            let startTime = Date.now();
-            let createList = [];
-            let failedItems = 0;
-            let consumedRequestUnits = 0;
-            for (let i = 0; i < this.itemsToInsert; i++) {
-                const uuid = faker.random.uuid();
-                const username = faker.internet.userName();
-                createList.push(async (callback: () => void) => {
-                    if (i % 1000 === 0 && i > 0) {
-                        console.log(`Creating item number ${i}`);
-                    }
-                    try {
-                        let result = await this.container.items.create({
-                            id: uuid,
-                            username: username,
-                            pk: uuid
-                        });
-                        consumedRequestUnits += result.requestCharge;
-                    } catch (error) {
-                        failedItems += 1;
-                    } finally {
-                        callback();
-                    }
-                });
-            }
-            async.parallelLimit(createList, this.concurrency, (error, results) => {
-                if (error) {
-                    reject(error);
-                    return;
-                }
-                let endTime = Date.now()
-                let durationInSeconds = (endTime - startTime) / 1000;
-                console.log(`Creating ${this.itemsToInsert} items took ${durationInSeconds} seconds`);
-                console.log(`Average throughput ${this.itemsToInsert / durationInSeconds} per second`);
-                console.log(`Failed to create ${failedItems} items`);
-                console.log(`Consumed Request Units ${consumedRequestUnits}`);
-                resolve(results);
+    private createTestData(wordCount = 10): void {
+        this.testData = [];
+        for (let i = 0; i < this.itemsToInsert; i++) {
+            this.testData.push({
+                id: faker.random.uuid(),
+                username: faker.internet.userName(),
+                data: faker.lorem.words(wordCount),
+                // This must be static for stored procedure bulk import to work
+                pk: PartitionKeyValue
             });
+        }
+    }
+
+    public updateTestDataIds(): void {
+        this.testData = this.testData.map((value) => {
+            return {
+                ...value,
+                id: faker.random.uuid()
+            }
         });
     }
 
-    public async deleteDatabase() {
+    public async bulkImport(importMethod: ImportMethod = ImportMethod.Create, useStoredProcedure = false): Promise<void> {
+        const bulkImporter = useStoredProcedure ? new BulkImporterStoredProcedure() : new BulkImporterParallel();
+        await bulkImporter.initialize(this.container);
+
+        const startTime = Date.now();
+
+        const results = await bulkImporter.import(this.testData, importMethod);
+
+        const endTime = Date.now()
+        const durationInSeconds = (endTime - startTime) / 1000;
+        console.log('---------------');
+        console.log(`${(useStoredProcedure ? 'Stored procedure' : 'Parallel')} importing ${this.itemsToInsert} items with ${ImportMethod[importMethod]} took ${durationInSeconds.toFixed(FRACTION_DIGITS)} seconds`);
+        console.log(`Average throughput ${(this.itemsToInsert / durationInSeconds).toFixed(FRACTION_DIGITS)} per second`);
+        console.log(`Consumed Request Units ${results.requestUnits.toFixed(FRACTION_DIGITS)}`);
+        const itemCountResult = await this.container.items.query('SELECT COUNT(1) FROM c').fetchAll();
+        console.log(`Item count in Cosmos DB is ${itemCountResult.resources[0]['$1']}`);
+        console.log(`Failed to import ${results.failedItems} items`);
+        results.errors.forEach(value => {
+            console.log(value);
+        });
+        console.log('---------------');
+    }
+
+    public async bulkImportStoredProcedure(importMethod: ImportMethod): Promise<void> {
+        await this.bulkImport(importMethod, true);
+    }
+
+    public async bulkImportParallel(importMethod: ImportMethod): Promise<void> {
+        await this.bulkImport(importMethod, false);
+    }
+
+    public async deleteDatabase(): Promise<void> {
         await this.database.delete();
     }
 
-    public async deleteContainer() {
+    public async deleteContainer(): Promise<void> {
         await this.container.delete();
     }
 
-    public async runAll() {
+    public async runAll(): Promise<void> {
         await this.createDatabase();
         await this.createContainer();
-        await this.createItems();
+        await this.bulkImport();
         await this.deleteContainer();
         await this.deleteDatabase();
     }
 
-    public async runCreates() {
+    public async runCreates(): Promise<void> {
         await this.createDatabase();
         await this.createContainer();
-        await this.createItems();
+    }
+
+    public async runDeletes(): Promise<void> {
+        await this.deleteContainer();
+        await this.deleteDatabase();
     }
 }
