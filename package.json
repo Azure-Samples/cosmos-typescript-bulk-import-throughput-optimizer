@@ -8,7 +8,7 @@
     "build": "tsc",
     "lint": "npx eslint . --ext .ts"
   },
-  "author": "Ville Rantala",
+  "author": "Microsoft",
   "license": "MIT",
   "dependencies": {
     "@azure/core-http": "^1.1.2",
