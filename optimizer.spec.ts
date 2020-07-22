@@ -11,7 +11,27 @@ class MockClient {
     public container: any = {
         items: {
             create: () => {
-                return Promise.resolve();
+                return Promise.resolve({
+                    requestCharge: 1
+                });
+            },
+            upsert: () => {
+                return Promise.resolve({
+                    requestCharge: 1
+                });
+            },
+            query: () => {
+                return {
+                    fetchAll: () => {
+                        return Promise.resolve({
+                            resources: [
+                                {
+                                    '$1': 0
+                                }
+                            ]
+                        });
+                    }
+                }
             }
         },
         delete: () => {
@@ -21,7 +41,7 @@ class MockClient {
 
     public database: any = {
         containers: {
-            createIfNotExists: async () => {
+            createIfNotExists: () => {
                 return Promise.resolve({
                     container: this.container
                 });
@@ -33,7 +53,7 @@ class MockClient {
     }
 
     public databases: any = {
-        createIfNotExists: async () => {
+        createIfNotExists: () => {
             return Promise.resolve({
                 database: this.database
             });
@@ -48,14 +68,14 @@ describe('Optimizer tests', () => {
     });
 
     it('Running all runs sequentially', async () => {
-        let mockClient = new MockClient();
-        let databaseCreateSpy = sinon.spy(mockClient.databases, 'createIfNotExists');
-        let containerCreateSpy = sinon.spy(mockClient.database.containers, 'createIfNotExists');
-        let itemCreateSpy = sinon.spy(mockClient.container.items, 'create');
-        let containerDeleteSpy = sinon.spy(mockClient.container, 'delete');
-        let databaseDeleteSpy = sinon.spy(mockClient.database, 'delete');
+        const mockClient = new MockClient();
+        const databaseCreateSpy = sinon.spy(mockClient.databases, 'createIfNotExists');
+        const containerCreateSpy = sinon.spy(mockClient.database.containers, 'createIfNotExists');
+        const itemCreateSpy = sinon.spy(mockClient.container.items, 'create');
+        const containerDeleteSpy = sinon.spy(mockClient.container, 'delete');
+        const databaseDeleteSpy = sinon.spy(mockClient.database, 'delete');
         const optimizer = new Optimizer();
-        await optimizer.initialize(mockClient);
+        await optimizer.initialize(mockClient as any);
         await optimizer.runAll();
         databaseCreateSpy.should.have.been.calledBefore(containerCreateSpy);
         containerCreateSpy.should.have.been.calledBefore(itemCreateSpy);
