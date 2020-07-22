@@ -1,4 +1,19 @@
-# Cosmos DB bulk import
+---
+page_type: sample
+languages:
+  - typescript
+  - javascript
+  - nodejs
+name: Cosmos DB bulk import using TypeScript
+description: |
+  A sample that shows different ways to do bulk import of items into Cosmos DB.
+products:
+  - azure
+  - azure-cosmos-db
+urlFragment: cosmos-typescript-bulk-import-throughput-optimizer
+---
+
+# Cosmos DB bulk import using TypeScript
 
 [![CI badge](https://github.com/vjrantal/cosmos-typescript-bulk-import-throughput-optimizer/workflows/CI/badge.svg)](https://github.com/vjrantal/cosmos-typescript-bulk-import-throughput-optimizer/actions?query=workflow%3ACI)
 
@@ -6,9 +21,46 @@
 
 This repository implements the same logic in TypeScript as what [https://github.com/Azure-Samples/cosmos-dotnet-bulk-import-throughput-optimizer](https://github.com/Azure-Samples/cosmos-dotnet-bulk-import-throughput-optimizer) implements in dotnet.
 
-The purpose is to find optimal ways to bulk insert in TypeScript / JavaScript. A secondary purpose is to compare the bulk insert performance between the two SDKs because they use different server-side API from Cosmos DB.
+The primary purpose is to find optimal ways to bulk insert in TypeScript / JavaScript and provide recommendations related to different approaches.
 
-## Results
+A secondary purpose is to compare the bulk insert performance between the two SDKs because they use different server-side API from Cosmos DB.
+
+## Prerequisites
+
+- [Create a Cosmos DB account](https://docs.microsoft.com/en-us/azure/cosmos-db/create-cosmosdb-resources-portal)
+- Note down the URI and PRIMARY KEY of your account (more guidance how from [here](https://docs.microsoft.com/en-us/azure/cosmos-db/sql-api-nodejs-get-started#Config))
+
+## Setup
+
+Set environment variables as following (remove all < and >):
+
+```bash
+export ENDPOINT_URL="https://<your-account-URI>.documents.azure.com:443/"
+export AUTHORIZATION_KEY="<your-account-PRIMARY-KEY>"
+```
+
+### Build
+
+```bash
+npm install
+npm run build
+```
+
+### Run locally
+
+```bash
+node dist/main.js
+```
+
+### Run tests locally
+
+```bash
+npm run test
+```
+
+## Key concepts
+
+### Test results
 
 | Import mechanism | Import method | Consumed RU | Items per second |
 | - | - | - | - |
@@ -24,27 +76,6 @@ Above results are when running the optimizer on Standard F2s VM in the same Azur
 As seen in above results, Stored Procedure gives better performance. It was also observed that Parallel import is heavy on CPU. The relative improvement with Stored Procedure is even higher if there is more distance between client and server because the is a lot less requests sent. For example, when run on laptop outside of Azure, the Parallel import achieved only ~100 items per second while the Stored Procedure achieved ~1000 items per second.
 
 The limitation of Stored Procedure is that the scope is within a single Partition Key so it means bulk import works only if all items have the same value as the Partition Key.
-
-## Build
-
-```bash
-npm install
-npm run build
-```
-
-## Run locally
-
-```bash
-export ENDPOINT_URL="https://<your-account>.documents.azure.com:443/"
-export AUTHORIZATION_KEY="<your-account-key>"
-node dist/main.js
-```
-
-## Run tests locally
-
-```bash
-npm run test
-```
 
 ## Attribution
 
