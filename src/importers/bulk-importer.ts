@@ -16,4 +16,10 @@ export enum ImportMethod {
     Create
 }
 
+export enum ImportOption {
+    Parallel,
+    StoredProcedure,
+    BulkOperations
+}
+
 export const PartitionKeyValue = 'bulk';
