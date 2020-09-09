@@ -15,7 +15,7 @@ urlFragment: cosmos-typescript-bulk-import-throughput-optimizer
 
 # Cosmos DB bulk import using TypeScript
 
-[![CI badge](https://github.com/vjrantal/cosmos-typescript-bulk-import-throughput-optimizer/workflows/CI/badge.svg)](https://github.com/vjrantal/cosmos-typescript-bulk-import-throughput-optimizer/actions?query=workflow%3ACI)
+[![CI badge](https://github.com/Azure-Samples/cosmos-typescript-bulk-import-throughput-optimizer/workflows/CI/badge.svg)](https://github.com/Azure-Samples/cosmos-typescript-bulk-import-throughput-optimizer/actions?query=workflow%3ACI)
 
 ## Introduction
 
