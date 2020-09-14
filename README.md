@@ -64,10 +64,12 @@ npm run test
 
 | Import mechanism | Import method | Consumed RU | Items per second |
 | - | - | - | - |
-| Parallel | Create | 27600 | 779 |
-| Parallel | Upsert | 27600 | 917 |
-| Stored Procedure | Create | 25650 | 1493 |
-| Stored Procedure | Upsert | 25722 | 1330 |
+| Stored Procedure | Create | 25648 | 1512 |
+| Stored Procedure | Upsert | 25689 | 1365 |
+| Bulk Operations | Create | 27619 | 1265 |
+| Bulk Operations | Upsert | 27619 | 1252 |
+| Parallel | Create | 27600 | 798 |
+| Parallel | Upsert | 27600 | 954 |
 
 Above results are when running the optimizer on Standard F2s VM in the same Azure region as where Cosmos DB is provisioned. The provisioned throughput was set to 10000 RU/s and 5000 items were inserted.
 

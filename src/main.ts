@@ -1,5 +1,5 @@
 import { Optimizer } from './optimizer';
-import { ImportMethod } from './bulk-importer';
+import { ImportMethod } from './importers/bulk-importer';
 
 const SLEEP_TIMEOUT = 10000;
 
@@ -27,6 +27,10 @@ const SLEEP_TIMEOUT = 10000;
             await sleep(SLEEP_TIMEOUT);
         }
 
+        await optimizer.bulkImportBulkOperations(ImportMethod.Create);
+        await reset();
+        await optimizer.bulkImportBulkOperations(ImportMethod.Upsert);
+        await reset();
         await optimizer.bulkImportParallel(ImportMethod.Create);
         await reset();
         await optimizer.bulkImportParallel(ImportMethod.Upsert);

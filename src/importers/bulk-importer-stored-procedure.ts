@@ -17,7 +17,7 @@ export class BulkImporterStoredProcedure implements BulkImporter {
 
     public async initialize(container: Container): Promise<void> {
         this.container = container;
-        this.storedProcedure = await this.ensureStoredProc('./dist/stored-procedure.js', 'spBulkInsertV1');
+        this.storedProcedure = await this.ensureStoredProc('./dist/stored-procedure-src/stored-procedure.js', 'spBulkInsertV1');
     }
 
     public async import(data: Array<any>, importMethod: ImportMethod): Promise<ImportResults> {

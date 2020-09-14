@@ -3,9 +3,10 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { ServiceClient, bearerTokenAuthenticationPolicy } from "@azure/core-http";
 import *  as faker from "faker";
 
-import { ImportMethod, PartitionKeyValue } from './bulk-importer';
-import { BulkImporterParallel } from './bulk-importer-parallel';
-import { BulkImporterStoredProcedure } from './bulk-importer-stored-procedure';
+import { ImportMethod, PartitionKeyValue, ImportOption, BulkImporter } from './importers/bulk-importer';
+import { BulkImporterBulkOperations } from "./importers/bulk-importer-bulk-operations";
+import { BulkImporterStoredProcedure } from "./importers/bulk-importer-stored-procedure";
+import { BulkImporterParallel } from "./importers/bulk-importer-parallel";
 
 const FRACTION_DIGITS = 2;
 
@@ -109,8 +110,18 @@ export class Optimizer {
         });
     }
 
-    public async bulkImport(importMethod: ImportMethod = ImportMethod.Create, useStoredProcedure = false): Promise<void> {
-        const bulkImporter = useStoredProcedure ? new BulkImporterStoredProcedure() : new BulkImporterParallel();
+    public async bulkImport(importMethod: ImportMethod = ImportMethod.Create, importOption: ImportOption = ImportOption.Parallel): Promise<void> {
+        let bulkImporter: BulkImporter;
+        switch (importOption) {
+            case ImportOption.StoredProcedure:
+                bulkImporter = new BulkImporterStoredProcedure();
+                break;
+            case ImportOption.BulkOperations:
+                bulkImporter = new BulkImporterBulkOperations();
+                break;
+            default:
+                bulkImporter = new BulkImporterParallel();
+        }
         await bulkImporter.initialize(this.container);
 
         const startTime = Date.now();
@@ -120,7 +131,7 @@ export class Optimizer {
         const endTime = Date.now()
         const durationInSeconds = (endTime - startTime) / 1000;
         console.log('---------------');
-        console.log(`${(useStoredProcedure ? 'Stored procedure' : 'Parallel')} importing ${this.itemsToInsert} items with ${ImportMethod[importMethod]} took ${durationInSeconds.toFixed(FRACTION_DIGITS)} seconds`);
+        console.log(`${ImportOption[importOption]} importing ${this.itemsToInsert} items with ${ImportMethod[importMethod]} took ${durationInSeconds.toFixed(FRACTION_DIGITS)} seconds`);
         console.log(`Average throughput ${(this.itemsToInsert / durationInSeconds).toFixed(FRACTION_DIGITS)} per second`);
         console.log(`Consumed Request Units ${results.requestUnits.toFixed(FRACTION_DIGITS)}`);
         const itemCountResult = await this.container.items.query('SELECT COUNT(1) FROM c').fetchAll();
@@ -133,11 +144,15 @@ export class Optimizer {
     }
 
     public async bulkImportStoredProcedure(importMethod: ImportMethod): Promise<void> {
-        await this.bulkImport(importMethod, true);
+        await this.bulkImport(importMethod, ImportOption.StoredProcedure);
     }
 
     public async bulkImportParallel(importMethod: ImportMethod): Promise<void> {
-        await this.bulkImport(importMethod, false);
+        await this.bulkImport(importMethod, ImportOption.Parallel);
+    }
+
+    public async bulkImportBulkOperations(importMethod: ImportMethod): Promise<void> {
+        await this.bulkImport(importMethod, ImportOption.BulkOperations);
     }
 
     public async deleteDatabase(): Promise<void> {
