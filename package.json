@@ -14,7 +14,7 @@
     "@azure/core-http": "^1.1.8",
     "@azure/cosmos": "^3.9.1",
     "@azure/identity": "^1.1.0",
-    "async": "^3.2.0",
+    "async": "^3.2.2",
     "faker": "^5.1.0"
   },
   "devDependencies": {
